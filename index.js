@@ -88,11 +88,30 @@ app.post('/webhook', async (req, res) => {
 
   await new Promise(resolve => setTimeout(resolve, 1800)); // efecto "escribiendo..."
   
-  await client.messages.create({
-    from: 'whatsapp:+14155238886',
-    to: numero,
-    body: respuesta
-  });
+  try {
+    await client.messages.create({
+      from: 'whatsapp:+14155238886',
+      to: numero,
+      body: respuesta
+    });
+  } catch (error) {
+    if (error.message.includes('exceeded the 9 daily messages limit')) {
+      console.error('⚠️ Se ha alcanzado el límite diario de mensajes de Twilio');
+      // No enviamos mensaje al usuario ya que no podemos enviar más mensajes
+    } else {
+      console.error('❌ Error al enviar mensaje:', error);
+      // Intentamos enviar un mensaje de error al usuario
+      try {
+        await client.messages.create({
+          from: 'whatsapp:+14155238886',
+          to: numero,
+          body: 'Lo siento, estamos experimentando problemas técnicos. Por favor, intenta más tarde.'
+        });
+      } catch (e) {
+        console.error('❌ No se pudo enviar el mensaje de error:', e);
+      }
+    }
+  }
 });
 
 const PORT = process.env.PORT || 3000;
