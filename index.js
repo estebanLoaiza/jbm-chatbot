@@ -45,38 +45,19 @@ app.post('/webhook', async (req, res) => {
 
   switch (intent) {
     case 'greetings':
-      respuesta = '👋 ¡Hola! ¿Te gustaría conocer nuestros *horarios*, *precios* o *ubicación*?';
+      respuesta = '👋 ¡Hola! ¿Te gustaría conocer nuestros *servicios*, *horarios* o *ubicación*?';
       break;
 
-    case 'get_info':
-      respuesta = '👨‍🔬 Somos un laboratorio clínico que ofrece exámenes como antígeno, PCR, orina, sangre y más.';
+    case 'get_service':
+      respuesta = '🔬 Realizamos los siguientes servicios: \n ✅ Consultas Médicas, \n ✅ Examenes de Laboratorio, \n ✅ Orinentacion en ETS, \n ✅ Examens ETS, \n ✅ Vacunatorio. \n Para más información sobre precios, te invitamos a contactarnos.';
       break;
 
     case 'get_location':
-      respuesta = '📍 Estamos ubicados en Av. Salud 123, Santiago (cerca de Metro Estación Central).';
+      respuesta = '📍 Estamos ubicados en Paseo Ahumada 370 (Metro Plaza de Armas), Oficina 728. Santiago.';
       break;
 
     case 'get_hours':
       respuesta = '⏰ Nuestro horario es:\n- Lunes a Viernes: 08:00 a 18:00\n- Sábado: 08:00 a 13:00\n- Domingo: Cerrado';
-      break;
-
-    case 'get_price':
-      respuesta = 'Te invitamos a que te pongas en contacto con nosotros para obtener el precio de los exámenes.';
-      break;
-      // if (examenEntity) {
-      //   const examen = await Examen.findOne({ nombre: { $regex: examenEntity, $options: 'i' } });
-      //   if (examen) {
-      //     respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion}`;
-      //   } else {
-      //     respuesta = `No encontré un examen llamado *${examenEntity}*. ¿Quieres que te muestre exámenes parecidos?`;
-      //   }
-      // } else {
-      //   respuesta = '¿De qué examen te gustaría saber el precio? Por ejemplo: *Antígeno*, *PCR*, *Hemograma*...';
-      // }
-      break;
-
-    case 'get_services':
-      respuesta = '🔬 Realizamos los siguientes exámenes:\n- Antígeno\n- PCR\n- Hemograma\n- Orina\n- Perfil Lipídico\n...\n(Responde el nombre para conocer el precio)';
       break;
 
     case 'farewell':
@@ -85,7 +66,7 @@ app.post('/webhook', async (req, res) => {
 
     case 'fallback':
     default:
-      respuesta = 'Disculpa, no entendí tu mensaje. ¿Podrías escribirlo de otra manera?';
+      respuesta = 'Disculpa, no entendí tu mensaje. ¿Te gustaría conocer nuestros *horarios*, *servicios* o *ubicación*?';
   }
 
   await new Promise(resolve => setTimeout(resolve, 1800)); // efecto "escribiendo..."
