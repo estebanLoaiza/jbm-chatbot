@@ -2,13 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
-const { MessagingResponse } = require('twilio').twiml;
+const twilio = require('twilio');
+const { MessagingResponse } = twilio.twiml;
 
 require('./db'); // conecta mongoose
 const Examen = require('./models/Examen');
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
+
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 async function getIntent(texto) {
   try {
@@ -29,7 +32,11 @@ async function getIntent(texto) {
 
 app.post('/webhook', async (req, res) => {
   const mensaje = req.body.Body.toLowerCase();
-  const twiml = new MessagingResponse();
+  const numero = req.body.From;
+
+  // 👇 Responder al webhook de inmediato
+  res.set('Content-Type', 'text/xml');
+  res.send('<Response></Response>');
 
   const intent = await getIntent(mensaje);
   let respuesta = 'Disculpa, no entendí tu mensaje. ¿Puedes reformularlo?';
@@ -37,8 +44,9 @@ app.post('/webhook', async (req, res) => {
   console.log("intent: ", intent);
   switch (intent) {
     case 'greetings':
-      respuesta = '¡Hola! Quieres saber horarios, precios o ubicacion?';
+      respuesta = '¡Hola! ¿Quieres saber horarios, precios o ubicación?';
       break;
+
     case 'get_price':
       const examen = await Examen.findOne({
         nombre: { $regex: mensaje, $options: 'i' }
@@ -64,9 +72,15 @@ app.post('/webhook', async (req, res) => {
       break;
   }
 
-  twiml.message(respuesta);
-  res.writeHead(200, { 'Content-Type': 'text/xml' });
-  res.end(twiml.toString());
+  // 👇 Simular "escribiendo..." con un retraso de 2 segundos
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // 👇 Enviar mensaje manualmente con Twilio
+  await client.messages.create({
+    from: 'whatsapp:+14155238886', // Número sandbox
+    to: numero,
+    body: respuesta
+  });
 });
 
 const PORT = process.env.PORT || 3000;
