@@ -22,7 +22,7 @@ async function getIntent(texto) {
     });
 
     const intent = res.data.intents?.[0]?.name || null;
-    const examenEntity = res.data.entities['examen:examen']?.[0]?.value || null;
+    const examenEntity = res.data.entities['examen_nombre:examen_nombre']?.[0]?.value || null;
 
     return { intent, examenEntity };
   } catch (err) {
