@@ -36,6 +36,9 @@ app.post('/webhook', async (req, res) => {
 
   console.log("intent: ", intent);
   switch (intent) {
+    case 'greetings':
+      respuesta = '¡Hola! Quieres saber horarios, precios o ubicacion?';
+      break;
     case 'get_price':
       const examen = await Examen.findOne({
         nombre: { $regex: mensaje, $options: 'i' }
