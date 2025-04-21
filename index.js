@@ -5,7 +5,7 @@ const axios = require('axios');
 const twilio = require('twilio');
 const { MessagingResponse } = twilio.twiml;
 
-require('./db'); // conecta mongoose
+require('./db'); // Conexión Mongoose
 const Examen = require('./models/Examen');
 
 const app = express();
@@ -13,20 +13,21 @@ app.use(bodyParser.urlencoded({ extended: false }));
 
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
+// 👉 Wit.ai: detectar intención y nombre del examen si viene
 async function getIntent(texto) {
   try {
     const res = await axios.get('https://api.wit.ai/message', {
-      headers: {
-        Authorization: process.env.WIT_API_TOKEN,
-      },
+      headers: { Authorization: process.env.WIT_API_TOKEN },
       params: { q: texto },
     });
 
-    const intent = res.data.intents[0];
-    return intent ? intent.name : null;
+    const intent = res.data.intents?.[0]?.name || null;
+    const examenEntity = res.data.entities['examen:examen']?.[0]?.value || null;
+
+    return { intent, examenEntity };
   } catch (err) {
     console.error('❌ Error con Wit.ai:', err);
-    return null;
+    return { intent: null, examenEntity: null };
   }
 }
 
@@ -34,50 +35,61 @@ app.post('/webhook', async (req, res) => {
   const mensaje = req.body.Body.toLowerCase();
   const numero = req.body.From;
 
-  // 👇 Responder al webhook de inmediato
   res.set('Content-Type', 'text/xml');
-  res.send('<Response></Response>');
+  res.send('<Response></Response>'); // responder al webhook de inmediato
 
-  const intent = await getIntent(mensaje);
+  const { intent, examenEntity } = await getIntent(mensaje);
   let respuesta = 'Disculpa, no entendí tu mensaje. ¿Puedes reformularlo?';
 
-  console.log("intent: ", intent);
+  console.log("🧠 Intent:", intent, "🔬 Examen:", examenEntity);
+
   switch (intent) {
     case 'greetings':
-      respuesta = '¡Hola! ¿Quieres saber horarios, precios o ubicación?';
-      break;
-
-    case 'get_price':
-      const examen = await Examen.findOne({
-        nombre: { $regex: mensaje, $options: 'i' }
-      });
-
-      if (examen) {
-        respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion}`;
-      } else {
-        respuesta = 'No encontré ese examen. ¿Podrías ser más específico?';
-      }
-      break;
-
-    case 'get_location':
-      respuesta = '🏥 Estamos en Av. Salud 123, Santiago.';
-      break;
-
-    case 'get_hours':
-      respuesta = '📅 Atendemos de lunes a viernes de 8:00 a 18:00 y sábados hasta las 13:00.';
+      respuesta = '👋 ¡Hola! ¿Te gustaría conocer nuestros *horarios*, *precios* o *ubicación*?';
       break;
 
     case 'get_info':
-      respuesta = '👩‍🔬 Somos un laboratorio especializado en exámenes clínicos. ¡Con gusto te ayudamos!';
+      respuesta = '👨‍🔬 Somos un laboratorio clínico que ofrece exámenes como antígeno, PCR, orina, sangre y más.';
       break;
+
+    case 'get_location':
+      respuesta = '📍 Estamos ubicados en Av. Salud 123, Santiago (cerca de Metro Estación Central).';
+      break;
+
+    case 'get_hours':
+      respuesta = '⏰ Nuestro horario es:\n- Lunes a Viernes: 08:00 a 18:00\n- Sábado: 08:00 a 13:00\n- Domingo: Cerrado';
+      break;
+
+    case 'get_price':
+      if (examenEntity) {
+        const examen = await Examen.findOne({ nombre: { $regex: examenEntity, $options: 'i' } });
+        if (examen) {
+          respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion}`;
+        } else {
+          respuesta = `No encontré un examen llamado *${examenEntity}*. ¿Quieres que te muestre exámenes parecidos?`;
+        }
+      } else {
+        respuesta = '¿De qué examen te gustaría saber el precio? Por ejemplo: *Antígeno*, *PCR*, *Hemograma*...';
+      }
+      break;
+
+    case 'get_services':
+      respuesta = '🔬 Realizamos los siguientes exámenes:\n- Antígeno\n- PCR\n- Hemograma\n- Orina\n- Perfil Lipídico\n...\n(Responde el nombre para conocer el precio)';
+      break;
+
+    case 'farewell':
+      respuesta = '👋 ¡Gracias por contactarnos! Que tengas un excelente día.';
+      break;
+
+    case 'fallback':
+    default:
+      respuesta = 'Disculpa, no entendí tu mensaje. ¿Podrías escribirlo de otra manera?';
   }
 
-  // 👇 Simular "escribiendo..." con un retraso de 2 segundos
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  // 👇 Enviar mensaje manualmente con Twilio
+  await new Promise(resolve => setTimeout(resolve, 1800)); // efecto "escribiendo..."
+  
   await client.messages.create({
-    from: 'whatsapp:+14155238886', // Número sandbox
+    from: 'whatsapp:+14155238886',
     to: numero,
     body: respuesta
   });
