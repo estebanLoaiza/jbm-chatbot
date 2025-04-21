@@ -1,23 +1,52 @@
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
+const axios = require('axios');
 const { MessagingResponse } = require('twilio').twiml;
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.post('/webhook', (req, res) => {
-  const incomingMsg = req.body.Body.toLowerCase();
+async function getWitIntent(message) {
+  try {
+    const res = await axios.get('https://api.wit.ai/message', {
+      headers: {
+        Authorization: process.env.WIT_API_TOKEN,
+      },
+      params: {
+        q: message,
+      },
+    });
+
+    console.log("res.data: ", res.data);
+    const intent = res.data.intents[0];
+    return intent ? intent.name : null;
+
+  } catch (err) {
+    console.error('Error llamando a Wit.ai:', err);
+    return null;
+  }
+}
+
+app.post('/webhook', async (req, res) => {
+  const incomingMsg = req.body.Body;
   const twiml = new MessagingResponse();
 
-  let responseMessage = 'Disculpa, no entendí tu mensaje.';
+  console.log("incomingMsg: ", incomingMsg);
+  const intent = await getWitIntent(incomingMsg);
 
-  if (incomingMsg.includes('precio')) {
-    responseMessage = 'Nuestros exámenes básicos tienen un precio desde $15.000 CLP. ¿Quieres ver el listado completo?';
-  } else if (incomingMsg.includes('horario')) {
-    responseMessage = 'Atendemos de lunes a viernes de 08:00 a 18:00 hrs y sábado de 09:00 a 13:00.';
-  } else if (incomingMsg.includes('direccion') || incomingMsg.includes('ubicación')) {
-    responseMessage = 'Estamos en Av. Las Ciencias 1234, Santiago. Puedes encontrarnos en Google Maps 😉';
+  let responseMessage = 'Disculpa, no entendí tu mensaje. ¿Puedes reformularlo?';
+
+  switch (intent) {
+    case 'get_price':
+      responseMessage = 'Nuestros exámenes básicos parten desde $15.000. ¿Quieres el valor de alguno específico?';
+      break;
+    case 'get_location':
+      responseMessage = 'Estamos en Av. Las Ciencias 1234, Santiago 🏥';
+      break;
+    case 'get_hours':
+      responseMessage = 'Nuestro horario es de lunes a viernes de 8:00 a 18:00 y sábados hasta las 13:00 ⏰';
+      break;
   }
 
   twiml.message(responseMessage);
@@ -27,5 +56,5 @@ app.post('/webhook', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Bot escuchando en http://localhost:${PORT}`);
+  console.log(`🤖 Bot corriendo en http://localhost:${PORT}`);
 });
