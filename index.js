@@ -4,57 +4,68 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const { MessagingResponse } = require('twilio').twiml;
 
+require('./db'); // conecta mongoose
+const Examen = require('./models/Examen');
+
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
-async function getWitIntent(message) {
+async function getIntent(texto) {
   try {
     const res = await axios.get('https://api.wit.ai/message', {
       headers: {
         Authorization: process.env.WIT_API_TOKEN,
       },
-      params: {
-        q: message,
-      },
+      params: { q: texto },
     });
 
-    console.log("res.data: ", res.data);
     const intent = res.data.intents[0];
     return intent ? intent.name : null;
-
   } catch (err) {
-    console.error('Error llamando a Wit.ai:', err);
+    console.error('❌ Error con Wit.ai:', err);
     return null;
   }
 }
 
 app.post('/webhook', async (req, res) => {
-  const incomingMsg = req.body.Body;
+  const mensaje = req.body.Body.toLowerCase();
   const twiml = new MessagingResponse();
 
-  console.log("incomingMsg: ", incomingMsg);
-  const intent = await getWitIntent(incomingMsg);
-
-  let responseMessage = 'Disculpa, no entendí tu mensaje. ¿Puedes reformularlo?';
+  const intent = await getIntent(mensaje);
+  let respuesta = 'Disculpa, no entendí tu mensaje. ¿Puedes reformularlo?';
 
   switch (intent) {
     case 'get_price':
-      responseMessage = 'Nuestros exámenes básicos parten desde $15.000. ¿Quieres el valor de alguno específico?';
+      const examen = await Examen.findOne({
+        nombre: { $regex: mensaje, $options: 'i' }
+      });
+
+      if (examen) {
+        respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion}`;
+      } else {
+        respuesta = 'No encontré ese examen. ¿Podrías ser más específico?';
+      }
       break;
+
     case 'get_location':
-      responseMessage = 'Estamos en Av. Las Ciencias 1234, Santiago 🏥';
+      respuesta = '🏥 Estamos en Av. Salud 123, Santiago.';
       break;
+
     case 'get_hours':
-      responseMessage = 'Nuestro horario es de lunes a viernes de 8:00 a 18:00 y sábados hasta las 13:00 ⏰';
+      respuesta = '📅 Atendemos de lunes a viernes de 8:00 a 18:00 y sábados hasta las 13:00.';
+      break;
+
+    case 'get_info':
+      respuesta = '👩‍🔬 Somos un laboratorio especializado en exámenes clínicos. ¡Con gusto te ayudamos!';
       break;
   }
 
-  twiml.message(responseMessage);
+  twiml.message(respuesta);
   res.writeHead(200, { 'Content-Type': 'text/xml' });
   res.end(twiml.toString());
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🤖 Bot corriendo en http://localhost:${PORT}`);
+  console.log(`🤖 Bot activo en puerto ${PORT}`);
 });
