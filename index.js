@@ -60,6 +60,25 @@ app.post('/webhook', async (req, res) => {
       respuesta = '⏰ Nuestro horario es:\n- Lunes a Viernes: 08:00 a 18:00\n- Sábado: 08:00 a 13:00\n- Domingo: Cerrado';
       break;
 
+    case 'get_price':
+      if (examenEntity) {
+        const examen = await Examen.findOne({ 
+          nombre: { 
+            $regex: examenEntity, 
+            $options: 'i' 
+          } 
+        });
+        
+        if (examen) {
+          respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion || 'Para más información, contáctanos.'}`;
+        } else {
+          respuesta = `No encontré un examen llamado *${examenEntity}*. Te invitamos a contactarnos para más información.`;
+        }
+      } else {
+        respuesta = '¿De qué examen te gustaría saber el precio? Por ejemplo: *Examen de Embarazo*, *Hemograma*, etc.';
+      }
+      break;
+
     case 'farewell':
       respuesta = '👋 ¡Gracias por contactarnos! Que tengas un excelente día.';
       break;
