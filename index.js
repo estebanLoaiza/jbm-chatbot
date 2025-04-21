@@ -61,16 +61,18 @@ app.post('/webhook', async (req, res) => {
       break;
 
     case 'get_price':
-      if (examenEntity) {
-        const examen = await Examen.findOne({ nombre: { $regex: examenEntity, $options: 'i' } });
-        if (examen) {
-          respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion}`;
-        } else {
-          respuesta = `No encontré un examen llamado *${examenEntity}*. ¿Quieres que te muestre exámenes parecidos?`;
-        }
-      } else {
-        respuesta = '¿De qué examen te gustaría saber el precio? Por ejemplo: *Antígeno*, *PCR*, *Hemograma*...';
-      }
+      respuesta = 'Te invitamos a que te pongas en contacto con nosotros para obtener el precio de los exámenes.';
+      break;
+      // if (examenEntity) {
+      //   const examen = await Examen.findOne({ nombre: { $regex: examenEntity, $options: 'i' } });
+      //   if (examen) {
+      //     respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion}`;
+      //   } else {
+      //     respuesta = `No encontré un examen llamado *${examenEntity}*. ¿Quieres que te muestre exámenes parecidos?`;
+      //   }
+      // } else {
+      //   respuesta = '¿De qué examen te gustaría saber el precio? Por ejemplo: *Antígeno*, *PCR*, *Hemograma*...';
+      // }
       break;
 
     case 'get_services':
