@@ -34,6 +34,7 @@ app.post('/webhook', async (req, res) => {
   const intent = await getIntent(mensaje);
   let respuesta = 'Disculpa, no entendí tu mensaje. ¿Puedes reformularlo?';
 
+  console.log("intent: ", intent);
   switch (intent) {
     case 'get_price':
       const examen = await Examen.findOne({
