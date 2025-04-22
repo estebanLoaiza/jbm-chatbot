@@ -62,20 +62,31 @@ app.post('/webhook', async (req, res) => {
 
     case 'get_price':
       if (examenEntity) {
+        console.log("🔍 Buscando examen:", examenEntity);
         const examen = await Examen.findOne({ 
           nombre: { 
             $regex: examenEntity, 
             $options: 'i' 
           } 
         });
+
+        // Obtener todos los exámenes disponibles
+        const examenes = await Examen.find({}, 'nombre precio descripcion');
+        let listaExamenes = '🔬 *Exámenes disponibles:*\n\n';
+        
+        examenes.forEach(ex => {
+          listaExamenes += `💉 *${ex.nombre}*\n💵 $${ex.precio}\n${ex.descripcion || ''}\n\n`;
+        });
+        
+        listaExamenes += 'Para más información, te invitamos a contactarnos.';
         
         if (examen) {
-          respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion || 'Para más información, contáctanos.'}`;
+          respuesta = `💉 *${examen.nombre}*\n💵 Precio: $${examen.precio}\nℹ️ ${examen.descripcion || 'Para más información, contáctanos.'}\n\n${listaExamenes}`;
         } else {
-          respuesta = `No encontré un examen llamado *${examenEntity}*. Te invitamos a contactarnos para más información.`;
+          respuesta = `No encontré un examen llamado *${examenEntity}*. Aquí te mostramos todos nuestros exámenes:\n\n${listaExamenes}`;
         }
       } else {
-        respuesta = '¿De qué examen te gustaría saber el precio? Por ejemplo: *Examen de Embarazo*, *Hemograma*, etc.';
+        respuesta = '¿De qué examen te gustaría saber el precio? Preguntame "cuanto cuesta un examen de sangre". De todas maneras te invitamos a contactarnos para más información.';
       }
       break;
 
