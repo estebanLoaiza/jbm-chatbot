@@ -5,7 +5,7 @@ const examenSchema = new mongoose.Schema({
   precio: Number,
   descripcion: String
 }, { 
-  collection: 'examenes',
+  collection: 'examanes',
   timestamps: true // Agregar timestamps para seguimiento
 });
 
@@ -29,6 +29,11 @@ examenSchema.post('findOne', function(doc) {
   } else {
     console.log('❌ Examen no encontrado');
   }
+});
+
+// Verificar la colección al iniciar
+mongoose.connection.on('connected', () => {
+  console.log('📚 Colección configurada:', examenSchema.options.collection);
 });
 
 module.exports = mongoose.model('Examen', examenSchema);

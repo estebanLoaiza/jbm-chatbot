@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const twilio = require('twilio');
 const { MessagingResponse } = twilio.twiml;
+const mongoose = require('mongoose');
 
 require('./db'); // Conexión Mongoose
 const Examen = require('./models/Examen');
@@ -71,12 +72,22 @@ app.post('/webhook', async (req, res) => {
         });
 
         // Obtener todos los exámenes disponibles
+        console.log('🔍 Iniciando búsqueda de exámenes...');
         const examenes = await Examen.find({}, 'nombre precio descripcion');
+        console.log('📊 Resultados de la búsqueda:', examenes);
+        console.log('📝 Número de exámenes encontrados:', examenes.length);
+        
         let listaExamenes = '🔬 *Exámenes disponibles:*\n\n';
         
-        examenes.forEach(ex => {
-          listaExamenes += `💉 *${ex.nombre}*\n💵 $${ex.precio}\n${ex.descripcion || ''}\n\n`;
-        });
+        if (examenes.length === 0) {
+          console.log('⚠️ No se encontraron exámenes en la base de datos');
+          listaExamenes = 'No hay exámenes disponibles en este momento.';
+        } else {
+          examenes.forEach((ex, index) => {
+            console.log(`📋 Examen ${index + 1}:`, ex);
+            listaExamenes += `💉 *${ex.nombre}*\n💵 $${ex.precio}\n${ex.descripcion || ''}\n\n`;
+          });
+        }
         
         listaExamenes += 'Para más información, te invitamos a contactarnos.';
         
@@ -130,4 +141,84 @@ app.post('/webhook', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🤖 Bot activo en puerto ${PORT}`);
+});
+
+// Endpoint de prueba para verificar MongoDB
+app.get('/test-db', async (req, res) => {
+  try {
+    console.log('🔍 Probando conexión a MongoDB...');
+    
+    // Verificar estado de la conexión
+    const estadoConexion = mongoose.connection.readyState;
+    console.log('📊 Estado de la conexión:', estadoConexion);
+    
+    // Listar todas las colecciones
+    const colecciones = await mongoose.connection.db.listCollections().toArray();
+    console.log('📚 Colecciones disponibles:', colecciones.map(c => c.name));
+    
+    // Verificar datos en cada colección similar
+    const coleccionesExamenes = ['examenes', 'examanes', 'examens'];
+    const resultados = {};
+    
+    for (const coleccion of coleccionesExamenes) {
+      try {
+        const datos = await mongoose.connection.db.collection(coleccion).find({}).toArray();
+        console.log(`🔬 Datos en ${coleccion}:`, datos);
+        resultados[coleccion] = datos;
+      } catch (error) {
+        console.error(`❌ Error al leer ${coleccion}:`, error);
+        resultados[coleccion] = { error: error.message };
+      }
+    }
+    
+    res.json({
+      estado: 'success',
+      conexion: estadoConexion === 1 ? 'conectado' : 'desconectado',
+      colecciones: colecciones.map(c => c.name),
+      resultados: resultados
+    });
+  } catch (error) {
+    console.error('❌ Error en test-db:', error);
+    res.status(500).json({
+      estado: 'error',
+      mensaje: error.message
+    });
+  }
+});
+
+// Endpoint para limpiar y migrar datos
+app.get('/cleanup-db', async (req, res) => {
+  try {
+    console.log('🧹 Iniciando limpieza de base de datos...');
+    
+    // 1. Obtener datos de la colección correcta
+    const datosCorrectos = await mongoose.connection.db.collection('examanes').find({}).toArray();
+    console.log('📊 Datos encontrados:', datosCorrectos.length);
+    
+    // 2. Crear colección correcta si no existe
+    await mongoose.connection.db.createCollection('examenes');
+    
+    // 3. Insertar datos en la colección correcta
+    if (datosCorrectos.length > 0) {
+      await mongoose.connection.db.collection('examenes').insertMany(datosCorrectos);
+      console.log('✅ Datos migrados a la colección correcta');
+    }
+    
+    // 4. Eliminar colecciones duplicadas
+    await mongoose.connection.db.collection('examanes').drop();
+    await mongoose.connection.db.collection('examens').drop();
+    console.log('🗑️ Colecciones duplicadas eliminadas');
+    
+    res.json({
+      estado: 'success',
+      mensaje: 'Base de datos limpiada y migrada correctamente',
+      datos_migrados: datosCorrectos.length
+    });
+  } catch (error) {
+    console.error('❌ Error en cleanup-db:', error);
+    res.status(500).json({
+      estado: 'error',
+      mensaje: error.message
+    });
+  }
 });
