@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-// Configurar eventos de conexión
+// Configurar eventos de conexión a la base de datos
 mongoose.connection.on('connected', () => {
   console.log('✅ MongoDB conectado a la base de datos:', mongoose.connection.db.databaseName);
   console.log('📚 Colecciones disponibles:', mongoose.connection.collections);

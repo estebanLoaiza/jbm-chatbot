@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+// Definir el esquema de examen
 const examenSchema = new mongoose.Schema({
   nombre: String,
   precio: Number,

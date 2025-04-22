@@ -7,6 +7,8 @@ const { MessagingResponse } = twilio.twiml;
 const mongoose = require('mongoose');
 
 require('./db'); // Conexión Mongoose
+
+// Importar el modelo de examen
 const Examen = require('./models/Examen');
 
 const app = express();
